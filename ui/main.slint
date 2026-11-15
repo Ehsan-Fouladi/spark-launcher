@@ -1,0 +1,205 @@
+export struct ResultItem {
+    title: string,
+    subtitle: string,
+    category: string,
+}
+
+component SearchInput inherits Rectangle {
+    in-out property <string> text <=> field.text;
+    in property <string> placeholder-text;
+    in property <string> suffix;
+    in property <length> font-size: 18px;
+
+    callback edited(string);
+    callback accepted(string);
+    callback arrow-up();
+    callback arrow-down();
+    callback escape();
+
+    forward-focus: field;
+
+    height: 40px;
+//    background: #27272a;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 14px;
+
+        field := TextInput {
+            vertical-alignment: center;
+            single-line: true;
+            font-size: root.font-size;
+            color: #f4f4f5;
+            selection-background-color: #3b82f6;
+            selection-foreground-color: white;
+
+            edited => { root.edited(self.text) }
+            accepted => { root.accepted(self.text) }
+
+            key-pressed(event) => {
+                if (event.text == Key.UpArrow) { root.arrow-up(); return accept; }
+                if (event.text == Key.DownArrow) { root.arrow-down(); return accept; }
+                if (event.text == Key.Escape) { root.escape(); return accept; }
+                return reject;
+            }
+        }
+    }
+
+    Text {
+        x: 14px;
+        y: (parent.height - self.height) / 2;
+        text: root.placeholder-text;
+        font-size: root.font-size;
+        color: #71717a;
+        visible: field.text == "";
+    }
+
+    measure := Text {
+        x: 14px;
+        y: (parent.height - self.height) / 2;
+        text: field.text;
+        font-size: root.font-size;
+        opacity: 0;
+    }
+
+    Text {
+        x: min(0px + measure.preferred-width + 12px, root.width - self.preferred-width - 14px);
+        y: (parent.height - self.height) / 2;
+        text: "= " + root.suffix;
+        font-size: root.font-size;
+//        color: #71717a;
+        visible: root.suffix != "" && field.text != "";
+    }
+}
+
+export component LauncherWindow inherits Window {
+    width: 700px;
+    height: 450px;
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+
+    in-out property <string> search-text;
+    in-out property <string> inline-result;
+    in-out property <[ResultItem]> results;
+    in-out property <int> selected-index: 0;
+
+    callback query-changed(string);
+    callback execute-selected();
+    callback hide-window();
+
+    forward-focus: search-input;
+    public function focus-input() { search-input.focus(); }
+
+    function select-next() {
+        if (root.results.length > 0) {
+            root.selected-index = Math.mod(root.selected-index + 1, root.results.length);
+        }
+    }
+
+    function select-prev() {
+        if (root.results.length > 0) {
+            root.selected-index = Math.mod(root.selected-index + root.results.length - 1, root.results.length);
+        }
+    }
+
+    Rectangle {
+//        background: #18181b;
+        background: rgba(24, 24, 27, 0.30);
+        border-radius: 8px;
+        border-width: 1px;
+//        border-color: #27272a;
+        border-color: rgba(255, 255, 255, 0.18);
+        clip: true;
+
+        VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+
+            search-input := SearchInput {
+                text <=> root.search-text;
+                placeholder-text: "Type here to search";
+                suffix: root.inline-result;
+
+                edited(t) => {
+                    root.selected-index = 0;
+                    root.query-changed(t);
+                }
+
+                accepted(t) => { root.execute-selected(); }
+                arrow-down => { root.select-next(); }
+                arrow-up => { root.select-prev(); }
+                escape => { root.hide-window(); }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: #27272a;
+            }
+
+            VerticalLayout {
+                spacing: 4px;
+                alignment: start;
+
+                for item[idx] in root.results: Rectangle {
+                    height: 52px;
+                    border-radius: 8px;
+                    background: idx == root.selected-index ? #3f3f46 : transparent;
+                    animate background { duration: 100ms; }
+
+                    TouchArea {
+                        clicked => {
+                            root.selected-index = idx;
+                            root.execute-selected();
+                        }
+                        changed has-hover => {
+                            if (self.has-hover) { root.selected-index = idx; }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        spacing: 12px;
+
+                        Rectangle {
+                            width: 46px;
+                            height: 24px;
+                            border-radius: 6px;
+                            background: item.category == "CALC" ? #059669 :
+                                item.category == "WEB" ? #2563eb :
+                                item.category == "SYS" ? #d97706 : #52525b;
+                            y: (parent.height - self.height) / 2;
+
+                            Text {
+                                text: item.category;
+                                color: white;
+                                font-size: 11px;
+                                font-weight: 700;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 2px;
+                            Text {
+                                text: item.title;
+                                color: #f4f4f5;
+                                font-size: 15px;
+                                font-weight: 600;
+                            }
+
+                            Text {
+                                text: item.subtitle;
+                                color: #a1a1aa;
+                                font-size: 12px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

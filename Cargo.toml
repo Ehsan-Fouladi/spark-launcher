@@ -1,0 +1,26 @@
+[package]
+name = "spark_launcher"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+arboard = "3.7.0"
+fuzzy-matcher = "0.3.7"
+global-hotkey = "0.10.0"
+meval = "0.2.0"
+open = "5.4.5"
+walkdir = "2.5.0"
+slint = { version = "1.18.1", default-features = false, features = ["compat-1-2", "std", "backend-winit", "renderer-software", "renderer-femtovg"] }
+i-slint-backend-winit = "1.18.1"
+window-vibrancy = "0.8.1"
+windows = { version = "0.62.2", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Storage_FileSystem",
+] }
+
+[build-dependencies]
+slint-build = "1.18.1"
