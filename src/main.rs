@@ -7,6 +7,55 @@ use crate::prelude::*;
 
 slint::include_modules!();
 
+#[cfg(target_os = "windows")]
+pub fn enable_autostart() {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::Win32::System::Registry::{
+        HKEY, HKEY_CURRENT_USER, KEY_WRITE, REG_OPTION_NON_VOLATILE, REG_SZ, RegCloseKey,
+        RegCreateKeyExW, RegSetValueExW,
+    };
+    use windows::core::PCWSTR;
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        let subkey: Vec<u16> = "Software\\Microsoft\\Windows\\CurrentVersion\\Run\0"
+            .encode_utf16()
+            .collect();
+        let value_name: Vec<u16> = "SparkLauncher\0".encode_utf16().collect();
+        let mut path_wide: Vec<u16> = exe_path.as_os_str().encode_wide().collect();
+        path_wide.push(0);
+
+        unsafe {
+            let mut hkey = HKEY::default();
+            if RegCreateKeyExW(
+                HKEY_CURRENT_USER,
+                PCWSTR(subkey.as_ptr()),
+                Some(0),
+                None,
+                REG_OPTION_NON_VOLATILE,
+                KEY_WRITE,
+                None,
+                &mut hkey,
+                None,
+            )
+            .is_ok()
+            {
+                let byte_slice = std::slice::from_raw_parts(
+                    path_wide.as_ptr() as *const u8,
+                    path_wide.len() * 2,
+                );
+                let _ = RegSetValueExW(
+                    hkey,
+                    PCWSTR(value_name.as_ptr()),
+                    Some(0),
+                    REG_SZ,
+                    Some(byte_slice),
+                );
+                let _ = RegCloseKey(hkey);
+            }
+        }
+    }
+}
+
 fn center_window(ui: &LauncherWindow) {
     ui.window().with_winit_window(|winit_window| {
         let monitor = winit_window
@@ -53,36 +102,32 @@ fn calc_inline(q: &str) -> String {
     }
 }
 
-fn main() -> Result<(), slint::PlatformError> {
-    let ui = LauncherWindow::new()?;
-    
-    {
-        let ui_weak = ui.as_weak();
-        slint::invoke_from_event_loop(move || {
-            if let Some(ui) = ui_weak.upgrade() {
-                center_window(&ui);
-                ui.window().with_winit_window(|winit_window| {
-                    let _ = window_vibrancy::apply_acrylic(winit_window, Some((18, 18, 22, 20)));
+fn style_window(ui: &LauncherWindow) {
+    ui.window().with_winit_window(|winit_window| {
+        let _ = window_vibrancy::apply_acrylic(winit_window, Some((18, 18, 22, 20)));
 
-                    if let Ok(handle) = winit_window.window_handle() {
-                        if let RawWindowHandle::Win32(win32_handle) = handle.as_raw() {
-                            let hwnd = HWND(win32_handle.hwnd.get() as _);
-                            let preference = DWMWCP_ROUND;
-                            unsafe {
-                                let _ = DwmSetWindowAttribute(
-                                    hwnd,
-                                    DWMWA_WINDOW_CORNER_PREFERENCE,
-                                    &preference as *const _ as *const _,
-                                    std::mem::size_of_val(&preference) as u32,
-                                );
-                            }
-                        }
-                    }
-                });
+        if let Ok(handle) = winit_window.window_handle() {
+            if let RawWindowHandle::Win32(win32_handle) = handle.as_raw() {
+                let hwnd = HWND(win32_handle.hwnd.get() as _);
+                let preference = DWMWCP_ROUND;
+                unsafe {
+                    let _ = DwmSetWindowAttribute(
+                        hwnd,
+                        DWMWA_WINDOW_CORNER_PREFERENCE,
+                        &preference as *const _ as *const _,
+                        std::mem::size_of_val(&preference) as u32,
+                    );
+                }
             }
-        })
-        .unwrap();
-    }
+        }
+    });
+}
+
+fn main() -> Result<(), slint::PlatformError> {
+    #[cfg(not(debug_assertions))]
+    enable_autostart();
+
+    let ui = LauncherWindow::new()?;
 
     let all_items = Rc::new(index_system_items());
     let current_actions: Rc<RefCell<Vec<ActionType>>> = Rc::new(RefCell::new(Vec::new()));
@@ -121,13 +166,14 @@ fn main() -> Result<(), slint::PlatformError> {
                 matched.push((
                     -1,
                     SearchEntry {
-                        title: format!("جستجوی «{}» در گوگل", search_query),
-                        subtitle: "باز کردن در مرورگر".to_string(),
+                        title: format!("searching «{}» in google", search_query),
+                        subtitle: "opening to browser".to_string(),
                         category: "WEB".to_string(),
                         action: ActionType::OpenUrl(format!(
                             "https://www.google.com/search?q={}",
-                            search_query.replace(' ', "+")
+                            search_query.replace(' ', "+"),
                         )),
+                        icon: None,
                     },
                 ));
             }
@@ -140,6 +186,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     title: entry.title.into(),
                     subtitle: entry.subtitle.into(),
                     category: entry.category.into(),
+                    icon: entry.icon.unwrap_or_default(),
                 });
                 actions.push(entry.action);
             }
@@ -183,7 +230,7 @@ fn main() -> Result<(), slint::PlatformError> {
     }
 
     let manager = GlobalHotKeyManager::new().unwrap();
-    let hotkey = HotKey::new(Some(Modifiers::ALT | Modifiers::SHIFT), Code::Space);
+    let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
     manager.register(hotkey).unwrap();
 
     let timer = slint::Timer::default();
@@ -198,8 +245,9 @@ fn main() -> Result<(), slint::PlatformError> {
                         if ui.window().is_visible() {
                             let _ = ui.hide();
                         } else {
-                            center_window(&ui);
                             let _ = ui.show();
+                            style_window(&ui);
+                            center_window(&ui);
                             ui.invoke_focus_input();
                         }
                     }
@@ -208,5 +256,8 @@ fn main() -> Result<(), slint::PlatformError> {
         },
     );
 
-    ui.run()
+    ui.window()
+        .on_close_requested(|| slint::CloseRequestResponse::HideWindow);
+
+    slint::run_event_loop_until_quit()
 }

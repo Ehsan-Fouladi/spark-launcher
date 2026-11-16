@@ -2,6 +2,7 @@ export struct ResultItem {
     title: string,
     subtitle: string,
     category: string,
+    icon: image
 }
 
 component SearchInput inherits Rectangle {
@@ -134,7 +135,7 @@ export component LauncherWindow inherits Window {
 
             Rectangle {
                 height: 1px;
-                background: #27272a;
+                background: #5e5e65;
             }
 
             VerticalLayout {
@@ -162,7 +163,14 @@ export component LauncherWindow inherits Window {
                         padding-right: 14px;
                         spacing: 12px;
 
-                        Rectangle {
+                        if item.icon.width> 0 : Image {
+                            source: item.icon;
+                            width: 32px;
+                            height: 32px;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        if item.icon.width == 0 : Rectangle {
                             width: 46px;
                             height: 24px;
                             border-radius: 6px;

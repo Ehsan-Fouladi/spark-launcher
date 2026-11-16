@@ -13,14 +13,16 @@ walkdir = "2.5.0"
 slint = { version = "1.18.1", default-features = false, features = ["compat-1-2", "std", "backend-winit", "renderer-software", "renderer-femtovg"] }
 i-slint-backend-winit = "1.18.1"
 window-vibrancy = "0.8.1"
-windows = { version = "0.62.2", features = [
-    "Win32_Foundation",
-    "Win32_Graphics_Dwm",
-    "Win32_Graphics_Gdi",
-    "Win32_UI_Shell",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Storage_FileSystem",
-] }
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_Security", "Win32_System_Com", "Win32_System_Registry", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [build-dependencies]
 slint-build = "1.18.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = false
+incremental = false
