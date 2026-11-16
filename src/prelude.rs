@@ -7,7 +7,7 @@ pub use global_hotkey::{
 };
 pub use i_slint_backend_winit::WinitWindowAccessor;
 pub use i_slint_backend_winit::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
-pub use slint::{Model, ModelRc, SharedString, VecModel, Image, Rgba8Pixel, SharedPixelBuffer};
+pub use slint::{Image, Model, ModelRc, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel};
 pub use std::cell::RefCell;
 pub use std::path::Path;
 pub use std::path::PathBuf;

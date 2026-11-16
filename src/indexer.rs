@@ -81,9 +81,8 @@ pub fn extract_icon(path: &Path) -> Option<Image> {
         let factory: Result<IShellItemImageFactory, _> =
             SHCreateItemFromParsingName(PCWSTR(wide_path.as_ptr()), None);
 
-        let image_result = factory.and_then(|f| {
-            f.GetImage(SIZE { cx: 48, cy: 48 }, SIIGBF_ICONONLY)
-        });
+        let image_result =
+            factory.and_then(|f| f.GetImage(SIZE { cx: 48, cy: 48 }, SIIGBF_ICONONLY));
 
         let hbitmap = match image_result {
             Ok(bmp) => bmp,
