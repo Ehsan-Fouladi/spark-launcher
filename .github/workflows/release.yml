@@ -19,13 +19,16 @@ jobs:
           targets: x86_64-pc-windows-msvc
 
       - name: Build
-        run: cargo build --release
+        run: |
+          cargo build --release
+          if ($LASTEXITCODE -ne 0) { exit 1 }  # اگر خطا داد، stop کن
 
       - name: Check what was built
         run: |
-          dir target/release/
+          echo "Looking for exe files..."
+          Get-ChildItem -Path target/release -Filter *.exe -Recurse
           echo "---"
-          dir target/release/*.exe
+          Get-ChildItem target/release/
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
