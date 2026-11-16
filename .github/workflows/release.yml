@@ -19,20 +19,25 @@ jobs:
           targets: x86_64-pc-windows-msvc
 
       - name: Build
-        run: |
-          cargo build --release
-          if ($LASTEXITCODE -ne 0) { exit 1 }  # اگر خطا داد، stop کن
+        run: cargo build --release
+        # اگر اینجا خطا بده، workflow خودکار stop می‌شود
 
-      - name: Check what was built
+      - name: Verify build output
         run: |
-          echo "Looking for exe files..."
-          Get-ChildItem -Path target/release -Filter *.exe -Recurse
-          echo "---"
-          Get-ChildItem target/release/
+          $exe = "target/release/spark_launcher.exe"
+          if (Test-Path $exe) {
+            echo "✅ Found: $exe"
+            echo "Size: $((Get-Item $exe).Length) bytes"
+          } else {
+            echo "❌ Build failed! File not found: $exe"
+            echo "Contents of target/release/:"
+            Get-ChildItem target/release/
+            exit 1
+          }
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: target/release/*.exe
+          files: target/release/spark_launcher.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
