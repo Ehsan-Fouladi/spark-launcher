@@ -23,9 +23,9 @@ jobs:
 
       - name: Check what was built
         run: |
-          ls -la target/release/
+          dir target/release/
           echo "---"
-          ls target/release/*.exe
+          dir target/release/*.exe
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
